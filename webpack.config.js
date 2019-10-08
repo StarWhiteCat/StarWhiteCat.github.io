@@ -3,9 +3,22 @@ const webpack= require('webpack')
 const VueLoaderPlugin= require('vue-loader/lib/plugin')
 const HtmlWebpackPlugin= require('html-webpack-plugin')
 const MiniCSSExtractPlugin= require('mini-css-extract-plugin')
+// 消除冗余的css代码
+const PurifyCssPlugin= require('purifycss-webpack')
+// 扫描路径
+const Glob= require('glob')
+const {CleanWebpackPlugin}= require('clean-webpack-plugin')
 
 const isDev= process.env.NODE_ENV==="development"
+const hashPart= isDev? '.': '.[contenthash:8].'
 const srcPath= path.resolve(__dirname, 'src')
+
+function getUrlLoaderOption(type) {
+  return {
+    limit: 10000,
+    name: `${type}/[name]${hashPart}[ext]`
+  }
+}
 
 const config= {
   target: 'web',
@@ -52,27 +65,59 @@ const config= {
         use: [
           {
             loader: 'url-loader',
-            options: {
-              limit: 1024,
-              name: '[name][hash].[ext]'
-            }
+            options: getUrlLoaderOption('images')
           }
         ]
       },{
-        test:/woff|ttf|eot|svg|otf/,
+        test: /\.(mp4|webm|ogg|mp3|wav|flac|aac)$/i,
+        loader: 'url-loader',
+        options: getUrlLoaderOption('media')
+      },{
+        test:/\.(woff|ttf|eot|svg|otf)$/,
         use:{
-            loader:'file-loader'
+            loader:'url-loader',
+            options: getUrlLoaderOption('font')
         }
       }
     ]
   },
+  // 消除冗余JS代码
+  optimization: {
+    splitChunks: {
+      cacheGroups: {
+        // 抽离多页面应用的公共模块的打包
+        // common: {
+        //   name: 'common',
+        //   chunks: 'all',
+        //   miniSize: 30,
+        //   miniChunks: 2
+        // }
+        // 分离业逻辑JS和第三方库公共JS--能抽离出来的公共库JS，其实就可以作为CDN方式去请求
+        vendor: {
+          name: 'vendor',
+          test: /node_modules/,
+          priority: 10,
+          chunks: 'all',
+          filename: `js/vendor${hashPart}js`,
+          // enfoce?
+          enforce: true
+        }
+      }
+    }
+  },
   plugins: [
+    new CleanWebpackPlugin(),
     new HtmlWebpackPlugin({
       title: 'Webpack 配置教程',
       template: path.resolve(__dirname, 'template.html'),
       filename: 'index.html'
     }),
-    new MiniCSSExtractPlugin(),
+    ...(isDev?[]: [new MiniCSSExtractPlugin()]),
+    // 去除冗余的css
+    ...(isDev?[]: [new PurifyCssPlugin({
+      // 扫描路径
+      paths: Glob.sync(path.join(__dirname, 'src/*.html'))
+    })]),
     new VueLoaderPlugin(),
     new webpack.DefinePlugin({
       'process.env': {
@@ -81,7 +126,6 @@ const config= {
     })
   ]
 }
-console.log(isDev)
 if(isDev){
   config.devtool= '#cheap-eval-source-map'
   config.devServer= {
