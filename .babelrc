@@ -1,0 +1,6 @@
+{
+  "plugins": ["@babel/plugin-transform-runtime"],
+  "presets": ["@babel/preset-env"],
+  // 去除[BABEL] Note: The code generator has deoptimised the styling of ...as it exceeds the max of 500KB.
+  "compact": false
+}

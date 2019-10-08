@@ -14,6 +14,15 @@ const config= {
     path: path.resolve(__dirname, 'dist'),
     filename: 'bundle.js'
   },
+  performance:{
+    hints: "warning", // 枚举
+    maxAssetSize: 30000000, // 整数类型（以字节为单位）
+    maxEntrypointSize: 50000000, // 整数类型（以字节为单位）
+    assetFilter: function(assetFilename) {
+    // 提供资源文件名的断言函数
+    return assetFilename.endsWith('.css') || assetFilename.endsWith('.js');
+    }
+  },
   module: {
     rules:[
       {
@@ -72,8 +81,9 @@ const config= {
     })
   ]
 }
+console.log(isDev)
 if(isDev){
-  config.devtool= '#source-map'
+  config.devtool= '#cheap-eval-source-map'
   config.devServer= {
     port: 8080,
     host: '0.0.0.0',
